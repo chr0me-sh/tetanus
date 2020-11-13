@@ -1,5 +1,5 @@
 [package]
-name = "tetanus-common"
+name = "tetanus"
 version = "0.1.0"
 authors = ["Lachlan Barker <lachlan@chr0me.sh>"]
 edition = "2018"

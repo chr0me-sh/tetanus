@@ -2,5 +2,6 @@
 
 members = [
     "agent",
-    "cnc"
+    "cnc",
+    "common"
 ]
