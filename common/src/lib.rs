@@ -1,7 +1,9 @@
-use std::{net, io, num, fmt};
+pub mod util;
+
+use std::{net, num, fmt};
+use std::io::{self, Write, Read};
 use std::convert::From;
 use std::convert::TryFrom;
-use std::convert::TryInto;
 
 macro_rules! cast_err {
     ( $err:ty, $src:ty, $dst:expr) => (
@@ -87,5 +89,36 @@ impl Message {
 impl From<MessageKind> for Message {
     fn from(kind: MessageKind) -> Message {
         Message::new(kind)
+    }
+}
+
+pub struct Agent {
+    id:   usize,
+    addr: net::IpAddr,
+    conn: net::TcpStream
+}
+
+impl Agent {
+    pub fn new(id: usize, conn: net::TcpStream) -> Agent {
+        Agent {
+            id,
+            addr: conn.peer_addr().unwrap().ip(),
+            conn
+        }
+    }
+
+    pub fn send(&mut self, msg: Message) -> Result<(), Error> {
+        self.conn.write(&msg.to_bytes())?;
+        Ok(())
+    }
+
+    pub fn recv(&mut self) -> Option<io::Result<Message>> {
+        let mut buf: [u8; 128] = [0; 128];
+
+        match self.conn.read(&mut buf) {
+            Ok(_) => Some(Ok(Message::from_bytes(&buf))),
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => None,
+            Err(e) => Some(Err(e))
+        }
     }
 }

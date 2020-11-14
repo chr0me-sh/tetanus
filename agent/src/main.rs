@@ -1,18 +1,13 @@
 extern crate tetanus;
 
 use tetanus::{Message, MessageKind};
+use tetanus::util::parse_arg;
 
 use std::{io, net, env, time};
 use std::io::{Read, Write};
 use std::process::exit;
 use std::str::FromStr;
 
-fn parse_arg<T: FromStr>(n: usize) -> Option<Result<T, T::Err>> {
-    match env::args().nth(n) {
-        Some(opt) => Some(opt.parse::<T>()),
-        None      => None,
-    }
-}
 
 fn send_msg(mut stream: &net::TcpStream, msg: Message) -> io::Result<()> {
     stream.write(&msg.to_bytes())?;
