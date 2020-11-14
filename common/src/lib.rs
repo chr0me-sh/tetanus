@@ -1,5 +1,7 @@
 use std::{net, io, num, fmt};
 use std::convert::From;
+use std::convert::TryFrom;
+use std::convert::TryInto;
 
 macro_rules! cast_err {
     ( $err:ty, $src:ty, $dst:expr) => (
@@ -34,13 +36,16 @@ impl fmt::Display for Error {
 
 const MSG_HEADER: [u8; 4] = [84, 84, 78, 83];
 
+#[derive(Debug)]
 pub struct Message {
     header: [u8; 4],    
     kind:   MessageKind,
 }
 
+#[derive(Debug)]
 pub enum MessageKind {
     IDENT,
+    UNK,
 }
 
 impl Message {
@@ -48,19 +53,39 @@ impl Message {
         Message { header: MSG_HEADER, kind }
     }
 
-    pub fn identify() -> Message {
-        Message::new(MessageKind::IDENT)
+    pub fn from_bytes(buf: &[u8; 128]) -> Message {
+        Message {
+            // TODO: Handle this rather than panic
+            header: <[u8; 4]>::try_from(&buf[0..4]).unwrap(),
+            kind: {
+                match buf[4] as u8 {
+                    1 => MessageKind::IDENT,
+                    _ => MessageKind::UNK,
+                }
+            }
+        }
     }
 
-    pub fn as_bytes(&self) -> [u8; 128] {
+    pub fn to_bytes(&self) -> [u8; 128] {
         let mut buf: [u8; 128] = [0; 128];
 
         for (i, n) in self.header.iter().enumerate() { buf[i] = *n };
 
         buf[4] = match &self.kind {
-            MessageKind::IDENT => 0
+            MessageKind::IDENT => 1,
+            MessageKind::UNK => 9,
         };
 
         buf
+    }
+
+    pub fn identify() -> Message {
+        Message::new(MessageKind::IDENT)
+    }
+}
+
+impl From<MessageKind> for Message {
+    fn from(kind: MessageKind) -> Message {
+        Message::new(kind)
     }
 }
