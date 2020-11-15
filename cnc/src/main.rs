@@ -1,4 +1,5 @@
 extern crate tetanus;
+mod menu;
 
 use tetanus::util;
 
@@ -39,7 +40,7 @@ fn run() -> Result<(), tetanus::Error> {
 
         // TODO: Error handling for command parsing
         match cmd[0] {
-            "listen" => srv = start_listener(net::SocketAddr::new(cmd[1].parse()?, cmd[2].parse()?)),
+            "listen" => (),
             _ => continue,
         };
     };
