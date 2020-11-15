@@ -6,7 +6,7 @@ use std::convert::From;
 use std::convert::TryFrom;
 
 macro_rules! cast_err {
-    ( $err:ty, $src:ty, $dst:expr) => (
+    ( $err:ty => $src:ty, $dst:expr) => (
         impl From<$src> for $err {
             fn from(e: $src) -> Self { $dst(e) }
         }
@@ -21,9 +21,9 @@ pub enum Error {
     ParseInt(num::ParseIntError)
 }
 
-cast_err!(Error, io::Error, Error::Io);
-cast_err!(Error, net::AddrParseError, Error::ParseAddr);
-cast_err!(Error, num::ParseIntError, Error::ParseInt);
+cast_err!(Error => io::Error, Error::Io);
+cast_err!(Error => net::AddrParseError, Error::ParseAddr);
+cast_err!(Error => num::ParseIntError, Error::ParseInt);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
